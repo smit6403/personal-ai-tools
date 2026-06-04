@@ -1,4 +1,3 @@
-JavaScript
 document.addEventListener('DOMContentLoaded', () => {
     const creativitySlider = document.getElementById('creativity');
     const creativityVal = document.getElementById('creativity-val');
