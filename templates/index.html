@@ -3,63 +3,67 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nexus Core // Personal AI</title>
+    <title>NEXUS // CORE</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
     <div class="app-container">
-        <header class="cyber-header">
+        <header class="header">
             <div class="logo">NEXUS // CORE <span class="pulse-dot"></span></div>
-            <div class="system-status">ALL SYSTEMS OPERATIONAL</div>
+            <div class="status-tag">ALL SYSTEMS OPERATIONAL</div>
         </header>
 
-        <main class="workspace">
-            <section class="panel control-panel">
-                <h3><span class="icon">⚙</span> CONFIGURATION</h3>
+        <div class="main-content">
+            <aside class="config-panel">
+                <h2><span class="icon">⚙</span> CONFIGURATION</h2>
                 
                 <div class="control-group">
                     <label for="tone">Writing Style / Tone</label>
-                    <select id="tone" name="tone">
-                        <option value="analytical">Analytical & Academic</option>
-                        <option value="conversational">Natural & Conversational</option>
-                        <option value="creative">Creative & Humanesque</option>
-                        <option value="concise">Direct & Concise</option>
+                    <select id="tone">
+                        <option value="Analytical & Academic">Analytical & Academic</option>
+                        <option value="Creative & Expressive">Creative & Expressive</option>
+                        <option value="Direct & Technical">Direct & Technical</option>
                     </select>
                 </div>
 
                 <div class="control-group">
-                    <label for="creativity">Creativity (Temperature): <span id="creativity-val">0.7</span></label>
-                    <input type="range" id="creativity" min="0.1" max="1.3" step="0.1" value="0.7">
+                    <div class="slider-header">
+                        <label for="temperature">Creativity (Temperature)</label>
+                        <span id="temp-val" class="value-display">0.7</span>
+                    </div>
+                    <input type="range" id="temperature" min="0.0" max="1.5" step="0.1" value="0.7">
                 </div>
 
                 <div class="control-group">
-                    <label for="variance">Structural Variance (Top P): <span id="variance-val">0.9</span></label>
-                    <input type="range" id="variance" min="0.1" max="1.0" step="0.05" value="0.9">
+                    <div class="slider-header">
+                        <label for="top_p">Structural Variance (Top P)</label>
+                        <span id="topp-val" class="value-display">0.9</span>
+                    </div>
+                    <input type="range" id="top_p" min="0.0" max="1.0" step="0.05" value="0.9">
                 </div>
 
                 <div class="control-group">
                     <label>Document Ingestion</label>
-                    <div class="file-upload-zone" id="drop-zone">
+                    <div class="drop-zone" id="drop-zone">
                         <p>Drag & drop or click to upload</p>
-                        <input type="file" id="file-input" accept=".txt,.pdf,.md" style="display: none;">
-                        <div id="file-status" class="file-status">No file selected</div>
+                        <input type="file" id="file-input" accept=".pdf" style="display: none;">
+                        <span id="file-name" class="file-status">No file selected</span>
                     </div>
                 </div>
-            </section>
+            </aside>
 
-            <section class="panel interaction-panel">
-                <div class="output-container" id="output-box">
-                    <div class="system-message">System ready. Input your prompt or upload materials below to begin processing.</div>
+            <main class="workspace">
+                <div class="output-display" id="output-display">
+                    <p class="system-message">System ready. Input your prompt or upload materials below to begin high-powered processing.</p>
                 </div>
 
                 <div class="input-container">
-                    <textarea id="prompt-input" placeholder="Type instructions, paste homework prompts, or ask questions..."></textarea>
-                    <button id="submit-btn">EXECUTE REQUEST</button>
+                    <textarea id="prompt-input" placeholder="Type instructions, paste prompts, or ask complex questions..."></textarea>
+                    <button id="execute-btn" class="execute-button">EXECUTE REQUEST</button>
                 </div>
-            </section>
-        </main>
+            </main>
+        </div>
     </div>
-
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
 </body>
 </html>
