@@ -1,119 +1,78 @@
 document.addEventListener('DOMContentLoaded', () => {
-    const creativitySlider = document.getElementById('creativity');
-    const creativityVal = document.getElementById('creativity-val');
-    const varianceSlider = document.getElementById('variance');
-    const varianceVal = document.getElementById('variance-val');
+    const tempSlider = document.getElementById('temperature');
+    const tempVal = document.getElementById('temp-val');
+    const topPSlider = document.getElementById('top_p');
+    const topPVal = document.getElementById('topp-val');
     
     const dropZone = document.getElementById('drop-zone');
     const fileInput = document.getElementById('file-input');
-    const fileStatus = document.getElementById('file-status');
+    const fileNameDisplay = document.getElementById('file-name');
     
-    const submitBtn = document.getElementById('submit-btn');
+    const executeBtn = document.getElementById('execute-btn');
     const promptInput = document.getElementById('prompt-input');
-    const outputBox = document.getElementById('output-box');
-    
-    let activeFile = null;
+    const outputDisplay = document.getElementById('output-display');
+    const toneSelect = document.getElementById('tone');
 
-    // Update Slider Labels Dynamically
-    creativitySlider.addEventListener('input', (e) => {
-        creativityVal.textContent = e.target.value;
-    });
-    
-    varianceSlider.addEventListener('input', (e) => {
-        varianceVal.textContent = e.target.value;
+    // Make meters dynamically update their displayed values
+    tempSlider.addEventListener('input', (e) => {
+        tempVal.textContent = e.target.value;
     });
 
-    // File Trigger Logic
+    topPSlider.addEventListener('input', (e) => {
+        topPVal.textContent = e.target.value;
+    });
+
+    // File Upload handling
     dropZone.addEventListener('click', () => fileInput.click());
     
     fileInput.addEventListener('change', (e) => {
         if (e.target.files.length > 0) {
-            activeFile = e.target.files[0];
-            fileStatus.textContent = `Target Loaded: ${activeFile.name}`;
+            fileNameDisplay.textContent = e.target.files[0].name;
+            fileNameDisplay.classList.add('active');
         }
     });
 
-    // Drag and Drop implementation
-    dropZone.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        dropZone.style.borderColor = 'var(--accent-neon)';
-    });
-
-    dropZone.addEventListener('dragleave', () => {
-        dropZone.style.borderColor = 'var(--border-color)';
-    });
-
-    dropZone.addEventListener('drop', (e) => {
-        e.preventDefault();
-        dropZone.style.borderColor = 'var(--border-color)';
-        if (e.dataTransfer.files.length > 0) {
-            activeFile = e.dataTransfer.files[0];
-            fileStatus.textContent = `Target Loaded: ${activeFile.name}`;
-        }
-    });
-
-    // Submission logic to backend API
-    submitBtn.addEventListener('click', async () => {
-        const textPrompt = promptInput.value.trim();
-        if (!textPrompt && !activeFile) {
-            alert('Please provide a prompt instruction or ingest a file target first.');
+    // Execute Request Logic
+    executeBtn.addEventListener('click', async () => {
+        const prompt = promptInput.value.trim();
+        if (!prompt && !fileInput.files[0]) {
+            alert('Please enter a prompt or upload a file first.');
             return;
         }
 
-        // Display User Action in Output Window
-        const userDiv = document.createElement('div');
-        userDiv.className = 'user-entry';
-        userDiv.textContent = `> ${textPrompt || "[Document Processing Sequence Run]"}`;
-        outputBox.appendChild(userDiv);
-        outputBox.scrollTop = outputBox.scrollHeight;
+        // Show loading state
+        executeBtn.disabled = true;
+        executeBtn.textContent = 'PROCESSING...';
+        outputDisplay.innerHTML = `<p class="system-message scanning">Processing request through upgraded intelligence matrix...</p>`;
 
-        // Build Multi-part Form Data payload
         const formData = new FormData();
-        formData.append('prompt', textPrompt);
-        formData.append('tone', document.getElementById('tone').value);
-        formData.append('creativity', creativitySlider.value);
-        formData.append('variance', varianceSlider.value);
-        if (activeFile) {
-            formData.append('file', activeFile);
+        formData.append('prompt', prompt);
+        formData.append('tone', toneSelect.value);
+        formData.append('temperature', tempSlider.value);
+        formData.append('top_p', topPSlider.value);
+        if (fileInput.files[0]) {
+            formData.append('file', fileInput.files[0]);
         }
 
-        promptInput.value = '';
-        submitBtn.disabled = true;
-        submitBtn.textContent = 'PROCESSING...';
-
         try {
-            const response = await fetch('/api/query', {
+            const response = await fetch('/process', {
                 method: 'POST',
                 body: formData
             });
+            
             const data = await response.json();
-
-            const aiDiv = document.createElement('div');
-            aiDiv.className = 'ai-entry';
-
-            if (data.success) {
-                // Formatting backticks/newlines basic simulation
-                aiDiv.innerHTML = data.response.replace(/\n/g, '<br>');
+            
+            if (data.status === 'success') {
+                outputDisplay.innerHTML = `<div class="response-text">${data.response}</div>`;
             } else {
-                aiDiv.textContent = `SYSTEM ERROR: ${data.error}`;
-                aiDiv.style.color = 'var(--accent-alert)';
+                outputDisplay.innerHTML = `<p class="error-message">SYSTEM FAULT: ${data.message}</p>`;
             }
-
-            outputBox.appendChild(aiDiv);
-        } catch (err) {
-            const errDiv = document.createElement('div');
-            errDiv.className = 'ai-entry';
-            errDiv.textContent = `CRITICAL MAIN LINK FAULT: ${err.message}`;
-            errDiv.style.color = 'var(--accent-alert)';
-            outputBox.appendChild(errDiv);
+        } catch (error) {
+            outputDisplay.innerHTML = `<p class="error-message">CONNECTION FAULT: Unable to communicate with core matrix.</p>`;
+            console.error(error);
         } finally {
-            submitBtn.disabled = false;
-            submitBtn.textContent = 'EXECUTE REQUEST';
-            // Clear used file targets
-            activeFile = null;
-            fileInput.value = '';
-            fileStatus.textContent = 'No file selected';
-            outputBox.scrollTop = outputBox.scrollHeight;
+            executeBtn.disabled = false;
+            executeBtn.textContent = 'EXECUTE REQUEST';
         }
     });
 });
