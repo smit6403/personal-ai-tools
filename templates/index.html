@@ -21,6 +21,7 @@
     </div>
     <div class="header-right">
       <div id="system-status" class="status-badge">ONLINE</div>
+      <div id="rag-badge" class="status-badge rag-badge hidden">RAG ACTIVE</div>
       <nav class="tab-nav">
         <button class="tab-btn active" data-tab="general">GENERAL</button>
         <button class="tab-btn" data-tab="study">STUDY MODE</button>
@@ -63,7 +64,7 @@
         </div>
 
         <div class="field-group">
-          <label class="field-label">PDF Document</label>
+          <label class="field-label">One-Off PDF (this request only)</label>
           <div class="drop-zone" id="drop-zone">
             <div class="drop-icon">⬆</div>
             <p class="drop-hint" id="drop-hint">Drag &amp; drop or click to browse</p>
@@ -71,6 +72,19 @@
             <div class="file-status" id="file-status">No file loaded</div>
           </div>
           <button class="clear-btn hidden" id="clear-file">✕ Remove file</button>
+        </div>
+
+        <div class="field-group kb-section">
+          <label class="field-label">📚 Knowledge Base (RAG)</label>
+          <div class="drop-zone" id="kb-drop-zone">
+            <div class="drop-icon">📂</div>
+            <p class="drop-hint">Drop PDF to add to knowledge base</p>
+            <input type="file" id="kb-file-input" accept=".pdf" />
+            <div class="file-status" id="kb-status">No documents loaded</div>
+          </div>
+          <button class="kb-upload-btn" id="kb-upload-btn">⬆ UPLOAD TO KNOWLEDGE BASE</button>
+          <div id="kb-doc-list" class="kb-doc-list"></div>
+          <button class="clear-btn hidden" id="kb-clear-btn">✕ Clear knowledge base</button>
         </div>
       </div>
 
@@ -118,6 +132,9 @@
             <span class="tag-label">[SYSTEM READY]</span>
             Welcome to Nexus Core. Choose a panel, enter your directive, and execute.
             <br /><br />
+            <span class="tag-label">[RAG MODE]</span>
+            Upload your Calc, Physics, or Econ PDFs to the Knowledge Base — answers will be sourced from your own notes.
+            <br /><br />
             <span class="tag-label">[STUDY MODE]</span>
             Switch to the Study tab to explain concepts, generate quizzes, build flashcards, or prep for exams.
           </div>
@@ -125,7 +142,7 @@
       </div>
 
       <div id="input-general" class="input-area">
-        <textarea id="prompt-input" class="prompt-textarea" placeholder="Enter your prompt, question, or directive…"></textarea>
+        <textarea id="prompt-input" class="prompt-textarea" placeholder="Enter your prompt, question, or directive… (Ctrl+Enter to submit)"></textarea>
         <button id="execute-btn" class="exec-btn" type="button">
           <span class="exec-label">EXECUTE</span>
           <span class="exec-icon">▶</span>
@@ -133,7 +150,7 @@
       </div>
 
       <div id="input-study" class="input-area hidden">
-        <textarea id="study-question" class="prompt-textarea" placeholder="Ask a specific question, or leave blank to let the mode run on your subject/notes…"></textarea>
+        <textarea id="study-question" class="prompt-textarea" placeholder="Ask a specific question, or leave blank to let the mode run on your subject/notes… (Ctrl+Enter to submit)"></textarea>
         <button id="study-btn" class="exec-btn study" type="button">
           <span class="exec-label">STUDY</span>
           <span class="exec-icon">▶</span>
