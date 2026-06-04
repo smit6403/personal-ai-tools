@@ -1,4 +1,5 @@
 import os
+import sys
 from flask import Flask, render_template, request, jsonify
 from openai import OpenAI
 from pypdf import PdfReader
@@ -8,70 +9,111 @@ load_dotenv()
 
 app = Flask(__name__)
 
-# Initialize the OpenAI client securely using the environment variable
-openai_api_key = os.environ.get("OPENAI_API_KEY")
-client = OpenAI(api_key=openai_api_key)
+# Safely extract the secret OpenAI API token from the secure cloud layer
+openai_api_token = os.environ.get("OPENAI_API_KEY")
+
+# Initialize the structural OpenAI engine asset
+client = OpenAI(api_key=openai_api_token)
 
 @app.route('/')
 def index():
     return render_template('index.html')
 
 @app.route('/process', methods=['POST'])
-def process_request():
+def process_directive():
+    print(":: Nexus Core Engine: Inbound payload transmission detected.", file=sys.stderr)
     try:
-        # 1. Verify API Key exists
-        if not openai_api_key:
-            return jsonify({'status': 'error', 'message': 'OpenAI API Key is missing from cloud environment settings.'})
+        # 1. Structural Environment Verification
+        if not openai_api_token or openai_api_token.strip() == "":
+            print(" -> ERROR: API security key is missing or blank.", file=sys.stderr)
+            return jsonify({
+                'status': 'error', 
+                'message': 'API Key access failure. Ensure OPENAI_API_KEY is correctly stored inside Render Environment settings.'
+            })
 
-        # 2. Extract configuration and inputs
-        prompt = request.form.get('prompt', '').strip()
-        tone = request.form.get('tone', 'Analytical & Academic')
-        temperature = float(request.form.get('temperature', 0.7))
-        top_p = float(request.form.get('top_p', 0.9))
+        # 2. Extract Variable Packets from Frontend Form
+        prompt_input = request.form.get('prompt', '').strip()
+        tone_profile = request.form.get('tone', 'Analytical & Academic')
+        temperature_setting = float(request.form.get('temperature', 0.7))
+        topp_setting = float(request.form.get('top_p', 0.9))
         
-        extracted_text = ""
+        print(f" -> Parameters Engaged: Tone='{tone_profile}' | Temp={temperature_setting} | TopP={topp_setting}", file=sys.stderr)
         
-        # 3. Handle PDF processing if a file was attached
+        document_text_pool = ""
+        
+        # 3. Handle File Extraction via Staged Uploads
         if 'file' in request.files:
-            file = request.files['file']
-            if file.filename != '':
+            uploaded_file = request.files['file']
+            if uploaded_file and uploaded_file.filename != '':
+                print(f" -> File detected for ingestion: '{uploaded_file.filename}'", file=sys.stderr)
                 try:
-                    reader = PdfReader(file)
-                    for page in reader.pages:
-                        text = page.extract_text()
-                        if text:
-                            extracted_text += text + "\n"
-                except Exception as pdf_err:
-                    return jsonify({'status': 'error', 'message': f'Failed reading PDF file: {str(pdf_err)}'})
+                    pdf_processing_reader = PdfReader(uploaded_file)
+                    extracted_pages_count = len(pdf_processing_reader.pages)
+                    
+                    for page_index in range(extracted_pages_count):
+                        target_page = pdf_processing_reader.pages[page_index]
+                        page_text_content = target_page.extract_text()
+                        if page_text_content:
+                            document_text_pool += page_text_content + "\n"
+                            
+                    print(f" -> Document Ingestion Success: Mapped {extracted_pages_count} pages.", file=sys.stderr)
+                except Exception as file_read_error:
+                    print(f" -> CRITICAL: File extraction interrupted: {str(file_read_error)}", file=sys.stderr)
+                    return jsonify({
+                        'status': 'error', 
+                        'message': f'Document Ingestion Failure (Internal File Error): {str(file_read_error)}'
+                    })
 
-        # 4. Fallback validation if everything is empty
-        if not prompt and not extracted_text:
-            return jsonify({'status': 'error', 'message': 'No input prompt or file content was provided.'})
+        # 4. Fail-Safe Verification for Empty Requests
+        if not prompt_input and not document_text_pool:
+            print(" -> Warning: Action halted due to vacant payload fields.", file=sys.stderr)
+            return jsonify({
+                'status': 'error', 
+                'message': 'Execution halted: You must either input a text prompt or upload a reference file matrix to begin processing.'
+            })
 
-        # 5. Build system instructions and payload
-        system_instruction = f"You are Nexus Core, a highly intelligent AI assistant. Style your output using a strict '{tone}' delivery system. Format responses beautifully with clean spacing."
-        
-        user_message = ""
-        if extracted_text:
-            user_message += f"[INGESTED DOCUMENT DATA]:\n{extracted_text}\n\n"
-        user_message += f"[USER REQUEST]: {prompt}"
-
-        # 6. Fetch processing generation from flagship model
-        completion = client.chat.completions.create(
-            model="gpt-4o",
-            messages=[
-                {"role": "system", "content": system_instruction},
-                {"role": "user", "content": user_message}
-            ],
-            temperature=temperature,
-            top_p=top_p
+        # 5. Build High-Accuracy System Matrix Prompts
+        system_architecture_framework = (
+            f"You are Nexus Core, an omni-capable, elite reasoning engine possessing maximum analytical authority. "
+            f"Your processing protocols are tuned to deliver comprehensive, deeply accurate, and meticulously structured solutions. "
+            f"When answering questions based on ingested materials, cross-reference data points aggressively to maintain absolute factual grounding. "
+            f"Never shorten mathematical or programmatic logic steps. Your mandatory phrasing profile is: '{tone_profile}'."
         )
         
-        ai_response = completion.choices[0].message.content
-        return jsonify({'status': 'success', 'response': ai_response})
+        # Assemble user request using structural boundary constraints
+        structured_user_payload = ""
+        if document_text_pool:
+            structured_user_payload += f"--- START INGESTED REFERENCE CORE MATERIALS ---\n{document_text_pool}\n--- END INGESTED REFERENCE CORE MATERIALS ---\n\n"
+        
+        structured_user_payload += f"[OPERATIONAL DIRECTIVE]: {prompt_input if prompt_input else 'Analyze the provided materials comprehensively and extract core insights.'}"
 
-    except Exception as e:
-        return jsonify({'status': 'error', 'message': f'Server Matrix Error: {str(e)}'})
+        print(" -> Requesting generation via flagship gpt-4o framework...", file=sys.stderr)
+        
+        # 6. Execute Generation via Flagship OpenAI Model Architecture
+        api_generation_sequence = client.chat.completions.create(
+            model="gpt-4o",
+            messages=[
+                {"role": "system", "content": system_architecture_framework},
+                {"role": "user", "content": structured_user_payload}
+            ],
+            temperature=temperature_setting,
+            top_p=topp_setting
+        )
+        
+        finalized_ai_solution = api_generation_sequence.choices[0].message.content
+        print(" -> Solution successfully generated. Dispatching packet back to terminal layout.", file=sys.stderr)
+        
+        return jsonify({
+            'status': 'success', 
+            'response': finalized_ai_solution
+        })
+
+    except Exception as matrix_global_fault:
+        print(f" -> CRITICAL EXCEPTION IN ENGINE: {str(matrix_global_fault)}", file=sys.stderr)
+        return jsonify({
+            'status': 'error', 
+            'message': f'Core System Exception Interrupted Generation: {str(matrix_global_fault)}'
+        })
 
 if __name__ == '__main__':
     app.run(debug=True)
