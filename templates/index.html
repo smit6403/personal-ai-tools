@@ -1,73 +1,148 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NEXUS // CORE AI</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NEXUS // CORE AI</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 </head>
 <body>
-    <div class="app-container">
-        <header class="header">
-            <div class="logo">NEXUS // CORE <span class="pulse-dot"></span></div>
-            <div class="status-tag" id="system-status">SYSTEM INITIALIZED</div>
-        </header>
 
-        <div class="main-content">
-            <aside class="config-panel">
-                <div class="panel-section-title">⚙️ CONFIGURATION ENGINE</div>
-                
-                <div class="control-group">
-                    <label for="tone">Directive Matrix (Tone)</label>
-                    <select id="tone" class="input-element">
-                        <option value="Analytical & Academic">Analytical & Academic</option>
-                        <option value="Creative & Explanatory">Creative & Explanatory</option>
-                        <option value="Direct & Technical Code Expert">Direct & Technical Expert</option>
-                    </select>
-                </div>
-
-                <div class="control-group">
-                    <div class="slider-header">
-                        <label for="temperature">Creativity (Temperature)</label>
-                        <span id="temp-val" class="value-display">0.7</span>
-                    </div>
-                    <input type="range" id="temperature" class="slider-element" min="0.0" max="1.5" step="0.1" value="0.7">
-                </div>
-
-                <div class="control-group">
-                    <div class="slider-header">
-                        <label for="top_p">Structural Variance (Top P)</label>
-                        <span id="topp-val" class="value-display">0.90</span>
-                    </div>
-                    <input type="range" id="top_p" class="slider-element" min="0.0" max="1.0" step="0.05" value="0.90">
-                </div>
-
-                <div class="control-group">
-                    <label>Data Ingestion Matrix</label>
-                    <div class="drop-zone" id="drop-zone">
-                        <div class="drop-zone-icon">📥</div>
-                        <p id="drop-text">Drag & drop PDF or click to browse</p>
-                        <input type="file" id="file-input" accept=".pdf" style="display: none;">
-                        <div id="file-name" class="file-status">No materials loaded</div>
-                    </div>
-                </div>
-            </aside>
-
-            <main class="workspace">
-                <div class="output-display" id="output-display">
-                    <div class="system-message">
-                        <span class="system-alert-tag">[SYSTEM READY]</span> Welcome to Nexus Core. Input your instruction metrics or ingest analytical materials to initiate high-performance generation.
-                    </div>
-                </div>
-
-                <div class="input-container">
-                    <textarea id="prompt-input" class="input-element" placeholder="Transmit directives, paste workspace queries, or request analysis..."></textarea>
-                    <button id="execute-btn" class="execute-button" type="button">EXECUTE REQUEST</button>
-                </div>
-            </main>
-        </div>
+  <header class="header">
+    <div class="logo">
+      <span class="logo-text">NEXUS</span>
+      <span class="logo-sep">//</span>
+      <span class="logo-sub">CORE AI</span>
+      <span class="pulse-ring"></span>
     </div>
-    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <div class="header-right">
+      <div id="system-status" class="status-badge">ONLINE</div>
+      <nav class="tab-nav">
+        <button class="tab-btn active" data-tab="general">GENERAL</button>
+        <button class="tab-btn" data-tab="study">STUDY MODE</button>
+      </nav>
+    </div>
+  </header>
+
+  <div class="layout">
+
+    <aside class="sidebar">
+
+      <div id="panel-general" class="config-panel active">
+        <div class="panel-title">⚙ CONFIGURATION</div>
+
+        <div class="field-group">
+          <label class="field-label" for="tone">Response Tone</label>
+          <select id="tone" class="field-select">
+            <option value="analytical">Analytical &amp; Academic</option>
+            <option value="creative">Creative &amp; Explanatory</option>
+            <option value="technical">Direct &amp; Technical</option>
+          </select>
+        </div>
+
+        <div class="field-group">
+          <div class="slider-row">
+            <label class="field-label" for="temperature">Creativity</label>
+            <span id="temp-val" class="slider-readout">0.7</span>
+          </div>
+          <input type="range" id="temperature" class="slider" min="0" max="1.5" step="0.1" value="0.7" />
+          <div class="slider-legend"><span>Precise</span><span>Creative</span></div>
+        </div>
+
+        <div class="field-group">
+          <div class="slider-row">
+            <label class="field-label" for="top_p">Vocabulary Range</label>
+            <span id="topp-val" class="slider-readout">0.9</span>
+          </div>
+          <input type="range" id="top_p" class="slider" min="0" max="1" step="0.05" value="0.9" />
+          <div class="slider-legend"><span>Focused</span><span>Diverse</span></div>
+        </div>
+
+        <div class="field-group">
+          <label class="field-label">PDF Document</label>
+          <div class="drop-zone" id="drop-zone">
+            <div class="drop-icon">⬆</div>
+            <p class="drop-hint" id="drop-hint">Drag &amp; drop or click to browse</p>
+            <input type="file" id="file-input" accept=".pdf" />
+            <div class="file-status" id="file-status">No file loaded</div>
+          </div>
+          <button class="clear-btn hidden" id="clear-file">✕ Remove file</button>
+        </div>
+      </div>
+
+      <div id="panel-study" class="config-panel">
+        <div class="panel-title">🎓 STUDY CONFIG</div>
+
+        <div class="field-group">
+          <label class="field-label" for="study-mode">Study Mode</label>
+          <select id="study-mode" class="field-select">
+            <option value="explain">📖 Explain Concept</option>
+            <option value="quiz">📝 Generate Quiz</option>
+            <option value="flashcards">🃏 Flashcards</option>
+            <option value="summarize">📋 Study Summary</option>
+            <option value="exam_prep">🎯 Exam Prep</option>
+          </select>
+        </div>
+
+        <div class="field-group">
+          <label class="field-label" for="study-subject">Subject / Topic</label>
+          <input type="text" id="study-subject" class="field-input" placeholder="e.g. Calculus — Integration by Parts" />
+        </div>
+
+        <div class="field-group">
+          <div class="slider-row">
+            <label class="field-label" for="difficulty">Difficulty</label>
+            <span id="diff-val" class="slider-readout">Intermediate</span>
+          </div>
+          <input type="range" id="difficulty" class="slider" min="0" max="2" step="1" value="1" />
+          <div class="slider-legend"><span>Beginner</span><span>Advanced</span></div>
+        </div>
+
+        <div class="field-group">
+          <label class="field-label" for="study-content">Paste Notes / Textbook Content</label>
+          <textarea id="study-content" class="field-textarea" rows="6" placeholder="Paste your lecture notes, textbook excerpt, or any material you want to study…"></textarea>
+        </div>
+      </div>
+
+    </aside>
+
+    <main class="workspace">
+
+      <div class="output-wrap" id="output-wrap">
+        <div class="output-display" id="output-display">
+          <div class="welcome-msg">
+            <span class="tag-label">[SYSTEM READY]</span>
+            Welcome to Nexus Core. Choose a panel, enter your directive, and execute.
+            <br /><br />
+            <span class="tag-label">[STUDY MODE]</span>
+            Switch to the Study tab to explain concepts, generate quizzes, build flashcards, or prep for exams.
+          </div>
+        </div>
+      </div>
+
+      <div id="input-general" class="input-area">
+        <textarea id="prompt-input" class="prompt-textarea" placeholder="Enter your prompt, question, or directive…"></textarea>
+        <button id="execute-btn" class="exec-btn" type="button">
+          <span class="exec-label">EXECUTE</span>
+          <span class="exec-icon">▶</span>
+        </button>
+      </div>
+
+      <div id="input-study" class="input-area hidden">
+        <textarea id="study-question" class="prompt-textarea" placeholder="Ask a specific question, or leave blank to let the mode run on your subject/notes…"></textarea>
+        <button id="study-btn" class="exec-btn study" type="button">
+          <span class="exec-label">STUDY</span>
+          <span class="exec-icon">▶</span>
+        </button>
+      </div>
+
+    </main>
+  </div>
+
+  <script src="{{ url_for('static', filename='js/main.js') }}"></script>
 </body>
 </html>
