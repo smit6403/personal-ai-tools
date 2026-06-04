@@ -1,0 +1,214 @@
+CSS
+:root {
+    --bg-base: #0a0c10;
+    --bg-surface: #121620;
+    --border-color: #1f293d;
+    --text-primary: #e2e8f0;
+    --text-muted: #64748b;
+    --accent-neon: #00ffcc;
+    --accent-blue: #38bdf8;
+    --accent-alert: #ef4444;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: 'Courier New', Courier, monospace;
+}
+
+body {
+    background-color: var(--bg-base);
+    color: var(--text-primary);
+    overflow: hidden;
+    height: 100vh;
+}
+
+.app-container {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+}
+
+.cyber-header {
+    background-color: var(--bg-surface);
+    border-bottom: 2px solid var(--border-color);
+    padding: 15px 25px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.logo {
+    font-weight: bold;
+    font-size: 1.2rem;
+    letter-spacing: 2px;
+    color: var(--accent-neon);
+}
+
+.pulse-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    background-color: var(--accent-neon);
+    border-radius: 50%;
+    margin-left: 5px;
+    animation: pulse 2s infinite;
+}
+
+.system-status {
+    font-size: 0.8rem;
+    color: var(--accent-blue);
+    border: 1px solid var(--accent-blue);
+    padding: 4px 8px;
+    border-radius: 4px;
+}
+
+.workspace {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+}
+
+.panel {
+    background-color: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    margin: 15px;
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+}
+
+.control-panel {
+    width: 320px;
+    padding: 20px;
+    gap: 20px;
+}
+
+.control-panel h3 {
+    font-size: 1rem;
+    color: var(--accent-blue);
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 10px;
+}
+
+.interaction-panel {
+    flex: 1;
+    margin-left: 0;
+    padding: 20px;
+}
+
+.control-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+label {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+}
+
+select, input[type="range"] {
+    background-color: var(--bg-base);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    padding: 8px;
+    border-radius: 4px;
+    outline: none;
+}
+
+.file-upload-zone {
+    border: 2px dashed var(--border-color);
+    padding: 20px;
+    text-align: center;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: border-color 0.3s;
+}
+
+.file-upload-zone:hover {
+    border-color: var(--accent-blue);
+}
+
+.file-status {
+    font-size: 0.75rem;
+    color: var(--accent-neon);
+    margin-top: 8px;
+}
+
+.output-container {
+    flex: 1;
+    background-color: var(--bg-base);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 20px;
+    overflow-y: auto;
+    font-size: 0.95rem;
+    line-height: 1.6;
+    margin-bottom: 15px;
+}
+
+.system-message {
+    color: var(--text-muted);
+    font-style: italic;
+}
+
+.user-entry {
+    color: var(--accent-blue);
+    margin-top: 10px;
+    border-left: 3px solid var(--accent-blue);
+    padding-left: 10px;
+}
+
+.ai-entry {
+    margin-top: 15px;
+    background: rgba(255, 255, 255, 0.02);
+    padding: 15px;
+    border-radius: 4px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.input-container {
+    display: flex;
+    gap: 15px;
+}
+
+textarea {
+    flex: 1;
+    height: 80px;
+    background-color: var(--bg-base);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    padding: 12px;
+    border-radius: 6px;
+    resize: none;
+    outline: none;
+}
+
+textarea:focus {
+    border-color: var(--accent-blue);
+}
+
+button {
+    background-color: transparent;
+    border: 1px solid var(--accent-neon);
+    color: var(--accent-neon);
+    padding: 0 25px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: all 0.3s;
+}
+
+button:hover {
+    background-color: var(--accent-neon);
+    color: var(--bg-base);
+    box-shadow: 0 0 15px rgba(0, 255, 204, 0.4);
+}
+
+@keyframes pulse {
+    0% { transform: scale(0.9); opacity: 0.6; }
+    50% { transform: scale(1.1); opacity: 1; }
+    100% { transform: scale(0.9); opacity: 0.6; }
+}
