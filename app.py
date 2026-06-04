@@ -16,7 +16,6 @@ client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 def index():
     return render_template('index.html')
 
-@app.route('/process', models=['POST'])
 @app.route('/process', methods=['POST'])
 def process_request():
     try:
