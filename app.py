@@ -4,116 +4,252 @@ from flask import Flask, render_template, request, jsonify
 from openai import OpenAI
 from pypdf import PdfReader
 from dotenv import load_dotenv
-
+ 
 load_dotenv()
-
+ 
 app = Flask(__name__)
-
-# Safely extract the secret OpenAI API token from the secure cloud layer
-openai_api_token = os.environ.get("OPENAI_API_KEY")
-
-# Initialize the structural OpenAI engine asset
-client = OpenAI(api_key=openai_api_token)
-
-@app.route('/')
+app.config["MAX_CONTENT_LENGTH"] = 20 * 1024 * 1024  # 20MB upload limit
+ 
+# ---------------------------------------------------------------------------
+# OpenAI client — initialized once at startup
+# ---------------------------------------------------------------------------
+_api_key = os.environ.get("OPENAI_API_KEY", "")
+client = OpenAI(api_key=_api_key) if _api_key else None
+ 
+ 
+def _check_client():
+    """Return (client, error_response). error_response is None when OK."""
+    if not client:
+        return None, jsonify({
+            "status": "error",
+            "message": "OPENAI_API_KEY is missing. Add it to Render → Environment Variables."
+        })
+    return client, None
+ 
+ 
+def _extract_pdf_text(file_storage):
+    """Extract all text from an uploaded PDF FileStorage object."""
+    reader = PdfReader(file_storage)
+    pages = []
+    for page in reader.pages:
+        text = page.extract_text()
+        if text:
+            pages.append(text)
+    return "\n\n".join(pages)
+ 
+ 
+# ---------------------------------------------------------------------------
+# System prompt builder — used by both /process and /study endpoints
+# ---------------------------------------------------------------------------
+ 
+TONE_PROFILES = {
+    "analytical": (
+        "You are Nexus Core, an elite analytical reasoning engine. "
+        "Be precise, evidence-driven, and thorough. Structure your answers "
+        "with clear headings, bullet points where appropriate, and never "
+        "skip logical steps. Use formal academic prose."
+    ),
+    "creative": (
+        "You are Nexus Core, a creative and explanatory AI assistant. "
+        "Use vivid analogies, real-world examples, and an engaging tone. "
+        "Make complex ideas feel approachable without sacrificing accuracy."
+    ),
+    "technical": (
+        "You are Nexus Core, a senior software engineer and technical expert. "
+        "Provide exact, runnable code. Explain implementation decisions. "
+        "Prefer depth over breadth. Never omit error handling in code examples."
+    ),
+    "tutor": (
+        "You are Nexus Core, a patient and encouraging personal tutor. "
+        "Your mission is to help the student UNDERSTAND, not just get the answer. "
+        "Break every concept into first principles. Ask a clarifying question "
+        "at the end if the topic warrants it. Use numbered steps for procedures."
+    ),
+}
+ 
+ 
+# ---------------------------------------------------------------------------
+# Routes
+# ---------------------------------------------------------------------------
+ 
+@app.route("/")
 def index():
-    return render_template('index.html')
-
-@app.route('/process', methods=['POST'])
+    return render_template("index.html")
+ 
+ 
+@app.route("/process", methods=["POST"])
 def process_directive():
-    print(":: Nexus Core Engine: Inbound payload transmission detected.", file=sys.stderr)
+    """
+    Main generation endpoint.
+    Accepts multipart/form-data with optional PDF upload.
+    """
+    print("[Nexus] /process request received", file=sys.stderr)
+ 
+    ai_client, err = _check_client()
+    if err:
+        return err
+ 
+    # --- Extract form fields with safe defaults ---
+    prompt_text   = (request.form.get("prompt", "") or "").strip()
+    tone_key      = request.form.get("tone", "analytical")
     try:
-        # 1. Structural Environment Verification
-        if not openai_api_token or openai_api_token.strip() == "":
-            print(" -> ERROR: API security key is missing or blank.", file=sys.stderr)
-            return jsonify({
-                'status': 'error', 
-                'message': 'API Key access failure. Ensure OPENAI_API_KEY is correctly stored inside Render Environment settings.'
-            })
-
-        # 2. Extract Variable Packets from Frontend Form
-        prompt_input = request.form.get('prompt', '').strip()
-        tone_profile = request.form.get('tone', 'Analytical & Academic')
-        temperature_setting = float(request.form.get('temperature', 0.7))
-        topp_setting = float(request.form.get('top_p', 0.9))
-        
-        print(f" -> Parameters Engaged: Tone='{tone_profile}' | Temp={temperature_setting} | TopP={topp_setting}", file=sys.stderr)
-        
-        document_text_pool = ""
-        
-        # 3. Handle File Extraction via Staged Uploads
-        if 'file' in request.files:
-            uploaded_file = request.files['file']
-            if uploaded_file and uploaded_file.filename != '':
-                print(f" -> File detected for ingestion: '{uploaded_file.filename}'", file=sys.stderr)
-                try:
-                    pdf_processing_reader = PdfReader(uploaded_file)
-                    extracted_pages_count = len(pdf_processing_reader.pages)
-                    
-                    for page_index in range(extracted_pages_count):
-                        target_page = pdf_processing_reader.pages[page_index]
-                        page_text_content = target_page.extract_text()
-                        if page_text_content:
-                            document_text_pool += page_text_content + "\n"
-                            
-                    print(f" -> Document Ingestion Success: Mapped {extracted_pages_count} pages.", file=sys.stderr)
-                except Exception as file_read_error:
-                    print(f" -> CRITICAL: File extraction interrupted: {str(file_read_error)}", file=sys.stderr)
-                    return jsonify({
-                        'status': 'error', 
-                        'message': f'Document Ingestion Failure (Internal File Error): {str(file_read_error)}'
-                    })
-
-        # 4. Fail-Safe Verification for Empty Requests
-        if not prompt_input and not document_text_pool:
-            print(" -> Warning: Action halted due to vacant payload fields.", file=sys.stderr)
-            return jsonify({
-                'status': 'error', 
-                'message': 'Execution halted: You must either input a text prompt or upload a reference file matrix to begin processing.'
-            })
-
-        # 5. Build High-Accuracy System Matrix Prompts
-        system_architecture_framework = (
-            f"You are Nexus Core, an omni-capable, elite reasoning engine possessing maximum analytical authority. "
-            f"Your processing protocols are tuned to deliver comprehensive, deeply accurate, and meticulously structured solutions. "
-            f"When answering questions based on ingested materials, cross-reference data points aggressively to maintain absolute factual grounding. "
-            f"Never shorten mathematical or programmatic logic steps. Your mandatory phrasing profile is: '{tone_profile}'."
+        temperature = float(request.form.get("temperature", 0.7))
+        temperature = max(0.0, min(2.0, temperature))
+    except ValueError:
+        temperature = 0.7
+    try:
+        top_p = float(request.form.get("top_p", 0.9))
+        top_p = max(0.0, min(1.0, top_p))
+    except ValueError:
+        top_p = 0.9
+ 
+    system_prompt = TONE_PROFILES.get(tone_key, TONE_PROFILES["analytical"])
+ 
+    # --- PDF extraction ---
+    document_text = ""
+    uploaded_file = request.files.get("file")
+    if uploaded_file and uploaded_file.filename:
+        print(f"[Nexus] Extracting PDF: {uploaded_file.filename}", file=sys.stderr)
+        try:
+            document_text = _extract_pdf_text(uploaded_file)
+            print(f"[Nexus] Extracted {len(document_text)} characters", file=sys.stderr)
+        except Exception as exc:
+            print(f"[Nexus] PDF error: {exc}", file=sys.stderr)
+            return jsonify({"status": "error", "message": f"PDF extraction failed: {exc}"})
+ 
+    # --- Validate that there is something to process ---
+    if not prompt_text and not document_text:
+        return jsonify({
+            "status": "error",
+            "message": "Please enter a prompt or upload a PDF document."
+        })
+ 
+    # --- Build user message ---
+    user_message_parts = []
+    if document_text:
+        user_message_parts.append(
+            f"--- DOCUMENT CONTENT START ---\n{document_text}\n--- DOCUMENT CONTENT END ---\n"
         )
-        
-        # Assemble user request using structural boundary constraints
-        structured_user_payload = ""
-        if document_text_pool:
-            structured_user_payload += f"--- START INGESTED REFERENCE CORE MATERIALS ---\n{document_text_pool}\n--- END INGESTED REFERENCE CORE MATERIALS ---\n\n"
-        
-        structured_user_payload += f"[OPERATIONAL DIRECTIVE]: {prompt_input if prompt_input else 'Analyze the provided materials comprehensively and extract core insights.'}"
-
-        print(" -> Requesting generation via flagship gpt-4o framework...", file=sys.stderr)
-        
-        # 6. Execute Generation via Flagship OpenAI Model Architecture
-        api_generation_sequence = client.chat.completions.create(
+    if prompt_text:
+        user_message_parts.append(prompt_text)
+    else:
+        user_message_parts.append(
+            "Please analyze the document above and provide a comprehensive summary "
+            "of its key concepts, arguments, and important details."
+        )
+ 
+    user_message = "\n\n".join(user_message_parts)
+ 
+    # --- Call OpenAI ---
+    try:
+        print(f"[Nexus] Calling gpt-4o | tone={tone_key} temp={temperature} top_p={top_p}", file=sys.stderr)
+        response = ai_client.chat.completions.create(
             model="gpt-4o",
             messages=[
-                {"role": "system", "content": system_architecture_framework},
-                {"role": "user", "content": structured_user_payload}
+                {"role": "system", "content": system_prompt},
+                {"role": "user",   "content": user_message},
             ],
-            temperature=temperature_setting,
-            top_p=topp_setting
+            temperature=temperature,
+            top_p=top_p,
+            max_tokens=4096,
         )
-        
-        finalized_ai_solution = api_generation_sequence.choices[0].message.content
-        print(" -> Solution successfully generated. Dispatching packet back to terminal layout.", file=sys.stderr)
-        
-        return jsonify({
-            'status': 'success', 
-            'response': finalized_ai_solution
-        })
-
-    except Exception as matrix_global_fault:
-        print(f" -> CRITICAL EXCEPTION IN ENGINE: {str(matrix_global_fault)}", file=sys.stderr)
-        return jsonify({
-            'status': 'error', 
-            'message': f'Core System Exception Interrupted Generation: {str(matrix_global_fault)}'
-        })
-
-if __name__ == '__main__':
-    app.run(debug=True)
+        answer = response.choices[0].message.content
+        print("[Nexus] Response generated successfully", file=sys.stderr)
+        return jsonify({"status": "success", "response": answer})
+ 
+    except Exception as exc:
+        print(f"[Nexus] OpenAI error: {exc}", file=sys.stderr)
+        return jsonify({"status": "error", "message": str(exc)})
+ 
+ 
+@app.route("/study", methods=["POST"])
+def study_mode():
+    """
+    Study-mode endpoint — optimised for tutoring, Q&A, flashcards, and exam prep.
+    Accepts JSON body: { mode, subject, content, question, difficulty }
+    """
+    print("[Nexus] /study request received", file=sys.stderr)
+ 
+    ai_client, err = _check_client()
+    if err:
+        return err
+ 
+    data = request.get_json(silent=True) or {}
+    mode       = data.get("mode", "explain")       # explain | quiz | flashcards | summarize | exam_prep
+    subject    = data.get("subject", "")
+    content    = data.get("content", "")
+    question   = data.get("question", "")
+    difficulty = data.get("difficulty", "intermediate")
+ 
+    base_system = TONE_PROFILES["tutor"]
+ 
+    MODE_INSTRUCTIONS = {
+        "explain": (
+            "The student wants a clear explanation. Break it into first principles. "
+            "Use analogies. End with a 1-sentence key takeaway."
+        ),
+        "quiz": (
+            "Generate 5 multiple-choice quiz questions on the topic. "
+            "Format each as:\nQ[n]: <question>\nA) ... B) ... C) ... D) ...\nAnswer: <letter>\nExplanation: <why>\n"
+        ),
+        "flashcards": (
+            "Generate 8 flashcard pairs on the topic. "
+            "Format as:\nFRONT: <term or question>\nBACK: <definition or answer>\n---\n"
+            "Cover the most important facts, formulas, and concepts."
+        ),
+        "summarize": (
+            "Produce a structured study summary: key concepts, important formulas or facts, "
+            "common misconceptions to avoid, and 3 practice questions with answers."
+        ),
+        "exam_prep": (
+            "Act as an exam coach. Identify the highest-probability topics to appear on an exam "
+            "for this subject. List them ranked by importance. Then give a rapid-fire drill: "
+            "10 short-answer questions with model answers."
+        ),
+    }
+ 
+    mode_instruction = MODE_INSTRUCTIONS.get(mode, MODE_INSTRUCTIONS["explain"])
+    system_prompt = f"{base_system}\n\nCurrent mode: {mode.upper()}.\n{mode_instruction}"
+ 
+    if difficulty:
+        system_prompt += f"\n\nPitch the difficulty level at: {difficulty} (beginner / intermediate / advanced)."
+ 
+    # Build user message
+    user_parts = []
+    if subject:
+        user_parts.append(f"Subject / Topic: {subject}")
+    if content:
+        user_parts.append(f"Material to work with:\n{content}")
+    if question:
+        user_parts.append(f"Student question: {question}")
+ 
+    if not user_parts:
+        return jsonify({"status": "error", "message": "Please provide a subject, content, or question."})
+ 
+    user_message = "\n\n".join(user_parts)
+ 
+    try:
+        print(f"[Nexus] Study call | mode={mode} difficulty={difficulty}", file=sys.stderr)
+        response = ai_client.chat.completions.create(
+            model="gpt-4o",
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user",   "content": user_message},
+            ],
+            temperature=0.5,   # lower temp = more reliable educational content
+            top_p=0.9,
+            max_tokens=4096,
+        )
+        answer = response.choices[0].message.content
+        return jsonify({"status": "success", "response": answer})
+ 
+    except Exception as exc:
+        print(f"[Nexus] Study OpenAI error: {exc}", file=sys.stderr)
+        return jsonify({"status": "error", "message": str(exc)})
+ 
+ 
+# ---------------------------------------------------------------------------
+# Entry point (local dev only — Render uses gunicorn)
+# ---------------------------------------------------------------------------
+if __name__ == "__main__":
+    app.run(debug=True, port=5000)
