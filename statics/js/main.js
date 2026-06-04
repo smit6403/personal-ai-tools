@@ -1,4 +1,5 @@
 document.addEventListener('DOMContentLoaded', () => {
+    // Target UI Elements
     const tempSlider = document.getElementById('temperature');
     const tempVal = document.getElementById('temp-val');
     const topPSlider = document.getElementById('top_p');
@@ -7,72 +8,97 @@ document.addEventListener('DOMContentLoaded', () => {
     const dropZone = document.getElementById('drop-zone');
     const fileInput = document.getElementById('file-input');
     const fileNameDisplay = document.getElementById('file-name');
+    const dropText = document.getElementById('drop-text');
     
     const executeBtn = document.getElementById('execute-btn');
     const promptInput = document.getElementById('prompt-input');
     const outputDisplay = document.getElementById('output-display');
     const toneSelect = document.getElementById('tone');
 
-    // Make meters dynamically update their displayed values
-    tempSlider.addEventListener('input', (e) => {
-        tempVal.textContent = e.target.value;
-    });
+    // 1. Live Sliders Functionality
+    if (tempSlider && tempVal) {
+        tempSlider.addEventListener('input', (e) => {
+            tempVal.textContent = parseFloat(e.target.value).toFixed(1);
+        });
+    }
 
-    topPSlider.addEventListener('input', (e) => {
-        topPVal.textContent = e.target.value;
-    });
+    if (topPSlider && topPVal) {
+        topPSlider.addEventListener('input', (e) => {
+            topPVal.textContent = parseFloat(e.target.value).toFixed(2);
+        });
+    }
 
-    // File Upload handling
-    dropZone.addEventListener('click', () => fileInput.click());
-    
-    fileInput.addEventListener('change', (e) => {
-        if (e.target.files.length > 0) {
-            fileNameDisplay.textContent = e.target.files[0].name;
-            fileNameDisplay.classList.add('active');
-        }
-    });
+    // 2. Clickable Drag-and-Drop Ingestion Mechanics
+    if (dropZone && fileInput) {
+        dropZone.addEventListener('click', () => {
+            fileInput.click();
+        });
 
-    // Execute Request Logic
-    executeBtn.addEventListener('click', async () => {
-        const prompt = promptInput.value.trim();
-        if (!prompt && !fileInput.files[0]) {
-            alert('Please enter a prompt or upload a file first.');
-            return;
-        }
-
-        // Show loading state
-        executeBtn.disabled = true;
-        executeBtn.textContent = 'PROCESSING...';
-        outputDisplay.innerHTML = `<p class="system-message scanning">Processing request through upgraded intelligence matrix...</p>`;
-
-        const formData = new FormData();
-        formData.append('prompt', prompt);
-        formData.append('tone', toneSelect.value);
-        formData.append('temperature', tempSlider.value);
-        formData.append('top_p', topPSlider.value);
-        if (fileInput.files[0]) {
-            formData.append('file', fileInput.files[0]);
-        }
-
-        try {
-            const response = await fetch('/process', {
-                method: 'POST',
-                body: formData
-            });
-            
-            const data = await response.json();
-            
-            if (data.status === 'success') {
-                outputDisplay.innerHTML = `<div class="response-text">${data.response}</div>`;
-            } else {
-                outputDisplay.innerHTML = `<p class="error-message">SYSTEM FAULT: ${data.message}</p>`;
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                const name = e.target.files[0].name;
+                if (fileNameDisplay) fileNameDisplay.textContent = name;
+                if (dropText) dropText.textContent = "Document Loaded";
+                dropZone.style.borderColor = "#ff0033";
             }
-        } catch (error) {
-            outputDisplay.innerHTML = `<p class="error-message">CONNECTION FAULT: Unable to communicate with core matrix.</p>`;
-            console.error(error);
-        } finally {
-            executeBtn.disabled = false;
-            executeBtn.textContent = 'EXECUTE REQUEST';
-        }
-    });
+        });
+    }
+
+    // 3. Core Generation Engine Trigger Execution
+    if (executeBtn) {
+        executeBtn.addEventListener('click', async () => {
+            const promptValue = promptInput ? promptInput.value.trim() : "";
+            const hasFile = fileInput && fileInput.files.length > 0;
+
+            if (!promptValue && !hasFile) {
+                alert('System Action Halted: Enter a prompt request or load a PDF matrix document first.');
+                return;
+            }
+
+            // Lock interface items during connection processing
+            executeBtn.disabled = true;
+            executeBtn.textContent = 'PROCESSING...';
+            if (outputDisplay) {
+                outputDisplay.innerHTML = `<p class="system-message processing-state">Processing request through upgraded intelligence matrix...</p>`;
+            }
+
+            const formData = new FormData();
+            formData.append('prompt', promptValue);
+            formData.append('tone', toneSelect ? toneSelect.value : 'Analytical & Academic');
+            formData.append('temperature', tempSlider ? tempSlider.value : 0.7);
+            formData.append('top_p', topPSlider ? topPSlider.value : 0.9);
+            
+            if (hasFile) {
+                formData.append('file', fileInput.files[0]);
+            }
+
+            try {
+                const fetchTarget = '/process';
+                const connection = await fetch(fetchTarget, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await connection.json();
+                
+                if (outputDisplay) {
+                    if (data.status === 'success') {
+                        // Converts simple newlines into HTML paragraphs for reading layout
+                        const structuredOutput = data.response.replace(/\n/g, '<br>');
+                        outputDisplay.innerHTML = `<div class="response-text">${structuredOutput}</div>`;
+                    } else {
+                        outputDisplay.innerHTML = `<p class="error-message">SYSTEM CRITICAL FAULT: ${data.message}</p>`;
+                    }
+                }
+            } catch (networkError) {
+                if (outputDisplay) {
+                    outputDisplay.innerHTML = `<p class="error-message">CONNECTION FAULT: Core engine communication lost. Verify your OpenAI account funds balance.</p>`;
+                }
+                console.error('Core Transmission Error:', networkError);
+            } finally {
+                executeBtn.disabled = false;
+                executeBtn.textContent = 'EXECUTE REQUEST';
+            }
+        });
+    }
 });
