@@ -3,26 +3,27 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NEXUS // CORE</title>
+    <title>NEXUS // CORE AI</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 </head>
 <body>
     <div class="app-container">
         <header class="header">
             <div class="logo">NEXUS // CORE <span class="pulse-dot"></span></div>
-            <div class="status-tag">ALL SYSTEMS OPERATIONAL</div>
+            <div class="status-tag" id="system-status">SYSTEM INITIALIZED</div>
         </header>
 
         <div class="main-content">
             <aside class="config-panel">
-                <h2>⚙️ CONFIGURATION</h2>
+                <div class="panel-section-title">⚙️ CONFIGURATION ENGINE</div>
                 
                 <div class="control-group">
-                    <label for="tone">Writing Style / Tone</label>
-                    <select id="tone">
+                    <label for="tone">Directive Matrix (Tone)</label>
+                    <select id="tone" class="input-element">
                         <option value="Analytical & Academic">Analytical & Academic</option>
-                        <option value="Creative & Expressive">Creative & Expressive</option>
-                        <option value="Direct & Technical">Direct & Technical</option>
+                        <option value="Creative & Explanatory">Creative & Explanatory</option>
+                        <option value="Direct & Technical Code Expert">Direct & Technical Expert</option>
                     </select>
                 </div>
 
@@ -31,35 +32,38 @@
                         <label for="temperature">Creativity (Temperature)</label>
                         <span id="temp-val" class="value-display">0.7</span>
                     </div>
-                    <input type="range" id="temperature" min="0.0" max="1.5" step="0.1" value="0.7">
+                    <input type="range" id="temperature" class="slider-element" min="0.0" max="1.5" step="0.1" value="0.7">
                 </div>
 
                 <div class="control-group">
                     <div class="slider-header">
                         <label for="top_p">Structural Variance (Top P)</label>
-                        <span id="topp-val" class="value-display">0.9</span>
+                        <span id="topp-val" class="value-display">0.90</span>
                     </div>
-                    <input type="range" id="top_p" min="0.0" max="1.0" step="0.05" value="0.9">
+                    <input type="range" id="top_p" class="slider-element" min="0.0" max="1.0" step="0.05" value="0.90">
                 </div>
 
                 <div class="control-group">
-                    <label>Document Ingestion</label>
+                    <label>Data Ingestion Matrix</label>
                     <div class="drop-zone" id="drop-zone">
-                        <p id="drop-text">Drag & drop or click to upload</p>
+                        <div class="drop-zone-icon">📥</div>
+                        <p id="drop-text">Drag & drop PDF or click to browse</p>
                         <input type="file" id="file-input" accept=".pdf" style="display: none;">
-                        <span id="file-name" class="file-status">No file selected</span>
+                        <div id="file-name" class="file-status">No materials loaded</div>
                     </div>
                 </div>
             </aside>
 
             <main class="workspace">
                 <div class="output-display" id="output-display">
-                    <p class="system-message">System ready. Input your prompt or upload materials below to begin high-powered processing.</p>
+                    <div class="system-message">
+                        <span class="system-alert-tag">[SYSTEM READY]</span> Welcome to Nexus Core. Input your instruction metrics or ingest analytical materials to initiate high-performance generation.
+                    </div>
                 </div>
 
                 <div class="input-container">
-                    <textarea id="prompt-input" placeholder="Type instructions, paste homework prompts, or ask questions..."></textarea>
-                    <button id="execute-btn" class="execute-button">EXECUTE REQUEST</button>
+                    <textarea id="prompt-input" class="input-element" placeholder="Transmit directives, paste workspace queries, or request analysis..."></textarea>
+                    <button id="execute-btn" class="execute-button" type="button">EXECUTE REQUEST</button>
                 </div>
             </main>
         </div>
