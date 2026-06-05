@@ -11,7 +11,6 @@
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 </head>
 <body>
-
   <header class="header">
     <div class="logo">
       <span class="logo-text">NEXUS</span>
@@ -22,6 +21,7 @@
     <div class="header-right">
       <div id="system-status" class="status-badge">ONLINE</div>
       <div id="rag-badge" class="status-badge rag-badge hidden">RAG ACTIVE</div>
+      <button id="new-chat-btn" class="new-chat-btn">+ NEW CHAT</button>
       <nav class="tab-nav">
         <button class="tab-btn active" data-tab="general">GENERAL</button>
         <button class="tab-btn" data-tab="study">STUDY MODE</button>
@@ -30,12 +30,9 @@
   </header>
 
   <div class="layout">
-
     <aside class="sidebar">
-
       <div id="panel-general" class="config-panel active">
         <div class="panel-title">⚙ CONFIGURATION</div>
-
         <div class="field-group">
           <label class="field-label" for="tone">Response Tone</label>
           <select id="tone" class="field-select">
@@ -44,7 +41,6 @@
             <option value="technical">Direct &amp; Technical</option>
           </select>
         </div>
-
         <div class="field-group">
           <div class="slider-row">
             <label class="field-label" for="temperature">Creativity</label>
@@ -53,7 +49,6 @@
           <input type="range" id="temperature" class="slider" min="0" max="1.5" step="0.1" value="0.7" />
           <div class="slider-legend"><span>Precise</span><span>Creative</span></div>
         </div>
-
         <div class="field-group">
           <div class="slider-row">
             <label class="field-label" for="top_p">Vocabulary Range</label>
@@ -62,18 +57,16 @@
           <input type="range" id="top_p" class="slider" min="0" max="1" step="0.05" value="0.9" />
           <div class="slider-legend"><span>Focused</span><span>Diverse</span></div>
         </div>
-
         <div class="field-group">
           <label class="field-label">One-Off PDF (this request only)</label>
           <div class="drop-zone" id="drop-zone">
             <div class="drop-icon">⬆</div>
-            <p class="drop-hint" id="drop-hint">Drag &amp; drop or click to browse</p>
+            <p class="drop-hint">Drag &amp; drop or click to browse</p>
             <input type="file" id="file-input" accept=".pdf" />
             <div class="file-status" id="file-status">No file loaded</div>
           </div>
           <button class="clear-btn hidden" id="clear-file">✕ Remove file</button>
         </div>
-
         <div class="field-group kb-section">
           <label class="field-label">📚 Knowledge Base (RAG)</label>
           <div class="drop-zone" id="kb-drop-zone">
@@ -90,7 +83,6 @@
 
       <div id="panel-study" class="config-panel">
         <div class="panel-title">🎓 STUDY CONFIG</div>
-
         <div class="field-group">
           <label class="field-label" for="study-mode">Study Mode</label>
           <select id="study-mode" class="field-select">
@@ -101,12 +93,10 @@
             <option value="exam_prep">🎯 Exam Prep</option>
           </select>
         </div>
-
         <div class="field-group">
           <label class="field-label" for="study-subject">Subject / Topic</label>
           <input type="text" id="study-subject" class="field-input" placeholder="e.g. Calculus — Integration by Parts" />
         </div>
-
         <div class="field-group">
           <div class="slider-row">
             <label class="field-label" for="difficulty">Difficulty</label>
@@ -115,51 +105,39 @@
           <input type="range" id="difficulty" class="slider" min="0" max="2" step="1" value="1" />
           <div class="slider-legend"><span>Beginner</span><span>Advanced</span></div>
         </div>
-
         <div class="field-group">
-          <label class="field-label" for="study-content">Paste Notes / Textbook Content</label>
-          <textarea id="study-content" class="field-textarea" rows="6" placeholder="Paste your lecture notes, textbook excerpt, or any material you want to study…"></textarea>
+          <label class="field-label" for="study-content">Paste Notes / Content</label>
+          <textarea id="study-content" class="field-textarea" rows="6" placeholder="Paste lecture notes, textbook excerpts, or any material…"></textarea>
         </div>
       </div>
-
     </aside>
 
     <main class="workspace">
-
       <div class="output-wrap" id="output-wrap">
         <div class="output-display" id="output-display">
           <div class="welcome-msg">
-            <span class="tag-label">[SYSTEM READY]</span>
-            Welcome to Nexus Core. Choose a panel, enter your directive, and execute.
-            <br /><br />
-            <span class="tag-label">[RAG MODE]</span>
-            Upload your Calc, Physics, or Econ PDFs to the Knowledge Base — answers will be sourced from your own notes.
-            <br /><br />
-            <span class="tag-label">[STUDY MODE]</span>
-            Switch to the Study tab to explain concepts, generate quizzes, build flashcards, or prep for exams.
+            <span class="tag-label">[SYSTEM READY]</span> Welcome to Nexus Core. Enter your directive and execute.
+            <br/><br/><span class="tag-label">[RAG MODE]</span> Upload PDFs to the Knowledge Base to ground answers in your notes.
+            <br/><br/><span class="tag-label">[STUDY MODE]</span> Switch to Study tab for quizzes, flashcards, and exam prep.
           </div>
         </div>
       </div>
-
       <div id="input-general" class="input-area">
-        <textarea id="prompt-input" class="prompt-textarea" placeholder="Enter your prompt, question, or directive… (Ctrl+Enter to submit)"></textarea>
+        <textarea id="prompt-input" class="prompt-textarea" placeholder="Ask anything… (Ctrl+Enter to send)"></textarea>
         <button id="execute-btn" class="exec-btn" type="button">
           <span class="exec-label">EXECUTE</span>
           <span class="exec-icon">▶</span>
         </button>
       </div>
-
       <div id="input-study" class="input-area hidden">
-        <textarea id="study-question" class="prompt-textarea" placeholder="Ask a specific question, or leave blank to let the mode run on your subject/notes… (Ctrl+Enter to submit)"></textarea>
+        <textarea id="study-question" class="prompt-textarea" placeholder="Ask a follow-up, or leave blank and hit STUDY… (Ctrl+Enter)"></textarea>
         <button id="study-btn" class="exec-btn study" type="button">
           <span class="exec-label">STUDY</span>
           <span class="exec-icon">▶</span>
         </button>
       </div>
-
     </main>
   </div>
-
   <script src="{{ url_for('static', filename='js/main.js') }}"></script>
 </body>
 </html>
