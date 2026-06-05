@@ -223,7 +223,11 @@ document.addEventListener("DOMContentLoaded", () => {
     const el = document.createElement("div");
     el.className = "msg-thinking";
     el.id = "thinking-bubble";
-    el.innerHTML = `<span class="loading-msg">[ processing… ]</span>`;
+    el.innerHTML = `
+      <div class="loading-dots">
+        <span></span><span></span><span></span>
+      </div>
+      <span class="thinking-label">NEXUS THINKING</span>`;
     outputDisplay.appendChild(el);
     outputDisplay.scrollTop = outputDisplay.scrollHeight;
   }
