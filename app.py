@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder='statics')
 app.config["MAX_CONTENT_LENGTH"] = 25 * 1024 * 1024
 
 _api_key = os.environ.get("OPENAI_API_KEY", "")
