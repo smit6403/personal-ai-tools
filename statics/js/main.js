@@ -24,6 +24,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const kbClearBtn    = document.getElementById("kb-clear-btn");
   const promptInput   = document.getElementById("prompt-input");
   const executeBtn    = document.getElementById("execute-btn");
+  const newChatBtn    = document.getElementById("new-chat-btn");
   const studyModeEl   = document.getElementById("study-mode");
   const studySubject  = document.getElementById("study-subject");
   const difficultyEl  = document.getElementById("difficulty");
@@ -34,6 +35,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   let inlineFile    = null;
   let kbPendingFile = null;
+  let conversation  = [];
   const DIFF_LABELS = ["Beginner", "Intermediate", "Advanced"];
 
   // ── Tabs ──────────────────────────────────────────────────────
@@ -70,7 +72,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // ── Inline PDF ────────────────────────────────────────────────
   function setInlineFile(file) {
     inlineFile = file;
-    if (fileStatus)   fileStatus.textContent = file.name;
+    if (fileStatus)   fileStatus.textContent = "📄 " + file.name;
     if (dropZone)     dropZone.classList.add("loaded");
     if (clearFileBtn) clearFileBtn.classList.remove("hidden");
   }
@@ -79,10 +81,10 @@ document.addEventListener("DOMContentLoaded", () => {
     dropZone.addEventListener("dragover", e => { e.preventDefault(); dropZone.classList.add("drag-over"); });
     dropZone.addEventListener("dragleave", () => dropZone.classList.remove("drag-over"));
     dropZone.addEventListener("drop", e => {
-      e.preventDefault();
-      dropZone.classList.remove("drag-over");
+      e.preventDefault(); dropZone.classList.remove("drag-over");
       const f = e.dataTransfer.files[0];
       if (f && f.name.toLowerCase().endsWith(".pdf")) setInlineFile(f);
+      else if (f) showToast("Only PDF files are supported.");
     });
   }
   fileInput && fileInput.addEventListener("change", () => {
@@ -99,7 +101,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // ── KB drop zone ──────────────────────────────────────────────
   function setKbPendingFile(file) {
     kbPendingFile = file;
-    if (kbStatus)   kbStatus.textContent = `Ready to upload: ${file.name}`;
+    if (kbStatus)   kbStatus.textContent = "📄 Ready: " + file.name;
     if (kbDropZone) kbDropZone.classList.add("loaded");
   }
 
@@ -107,10 +109,10 @@ document.addEventListener("DOMContentLoaded", () => {
     kbDropZone.addEventListener("dragover", e => { e.preventDefault(); kbDropZone.classList.add("drag-over"); });
     kbDropZone.addEventListener("dragleave", () => kbDropZone.classList.remove("drag-over"));
     kbDropZone.addEventListener("drop", e => {
-      e.preventDefault();
-      kbDropZone.classList.remove("drag-over");
+      e.preventDefault(); kbDropZone.classList.remove("drag-over");
       const f = e.dataTransfer.files[0];
       if (f && f.name.toLowerCase().endsWith(".pdf")) setKbPendingFile(f);
+      else if (f) showToast("Only PDF files are supported.");
     });
   }
   kbFileInput && kbFileInput.addEventListener("change", () => {
@@ -119,30 +121,28 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // ── KB Upload ─────────────────────────────────────────────────
   kbUploadBtn && kbUploadBtn.addEventListener("click", async () => {
-    if (!kbPendingFile) {
-      if (kbStatus) kbStatus.textContent = "Drop a PDF first.";
-      return;
-    }
+    if (!kbPendingFile) { if (kbStatus) kbStatus.textContent = "⚠ Drop a PDF first."; return; }
     kbUploadBtn.disabled = true;
-    if (kbStatus) kbStatus.textContent = `Uploading ${kbPendingFile.name}…`;
+    if (kbStatus) kbStatus.textContent = "⏳ Embedding " + kbPendingFile.name + "…";
     const fd = new FormData();
     fd.append("file", kbPendingFile);
     try {
       const res  = await fetch("/upload", { method: "POST", body: fd });
       const data = await res.json();
       if (data.status === "success") {
-        if (kbStatus) kbStatus.textContent = `✓ ${data.message} | Total: ${data.total_chunks} chunks`;
+        if (kbStatus) kbStatus.textContent = "✓ " + data.message;
         kbPendingFile = null;
         if (kbFileInput) kbFileInput.value = "";
         if (kbDropZone)  kbDropZone.classList.remove("loaded");
         updateKbList(data.loaded_docs);
         setRagActive(true);
         if (kbClearBtn) kbClearBtn.classList.remove("hidden");
+        showToast("Knowledge base updated — " + data.total_chunks + " chunks ready.");
       } else {
-        if (kbStatus) kbStatus.textContent = `✗ ${data.message}`;
+        if (kbStatus) kbStatus.textContent = "✗ " + data.message;
       }
     } catch (err) {
-      if (kbStatus) kbStatus.textContent = `✗ Network error: ${err.message}`;
+      if (kbStatus) kbStatus.textContent = "✗ Network error: " + err.message;
     } finally {
       kbUploadBtn.disabled = false;
     }
@@ -157,8 +157,14 @@ document.addEventListener("DOMContentLoaded", () => {
       setRagActive(false);
       kbClearBtn.classList.add("hidden");
     } catch (err) {
-      if (kbStatus) kbStatus.textContent = `✗ ${err.message}`;
+      if (kbStatus) kbStatus.textContent = "✗ " + err.message;
     }
+  });
+
+  // ── New Chat ──────────────────────────────────────────────────
+  newChatBtn && newChatBtn.addEventListener("click", () => {
+    conversation = [];
+    showWelcome();
   });
 
   // ── Helpers ───────────────────────────────────────────────────
@@ -171,59 +177,87 @@ document.addEventListener("DOMContentLoaded", () => {
     const kbList = document.getElementById("kb-doc-list");
     if (!kbList) return;
     kbList.innerHTML = (docs && docs.length)
-      ? docs.map(d => `<div class="kb-doc-item">📄 ${d}</div>`).join("")
-      : "";
+      ? docs.map(d => `<div class="kb-doc-item">📄 ${d}</div>`).join("") : "";
   }
 
   function setStatus(state) {
     if (!systemStatus) return;
     systemStatus.className = "status-badge";
-    if (state === "computing") {
-      systemStatus.classList.add("computing");
-      systemStatus.textContent = "PROCESSING";
-    } else if (state === "error") {
-      systemStatus.classList.add("error");
-      systemStatus.textContent = "ERROR";
+    if (state === "computing") { systemStatus.classList.add("computing"); systemStatus.textContent = "PROCESSING"; }
+    else if (state === "error") { systemStatus.classList.add("error"); systemStatus.textContent = "ERROR"; }
+    else { systemStatus.textContent = "ONLINE"; }
+  }
+
+  function showWelcome() {
+    if (!outputDisplay) return;
+    outputDisplay.innerHTML = `<div class="welcome-msg">
+      <span class="tag-label">[SYSTEM READY]</span> Welcome to Nexus Core. Enter your directive and execute.
+      <br/><br/><span class="tag-label">[RAG MODE]</span> Upload PDFs to the Knowledge Base to ground answers in your notes.
+      <br/><br/><span class="tag-label">[STUDY MODE]</span> Switch to Study tab for quizzes, flashcards, and exam prep.
+    </div>`;
+  }
+
+  function appendMessage(role, text, ragUsed) {
+    if (!outputDisplay) return;
+    const welcome = outputDisplay.querySelector(".welcome-msg");
+    if (welcome) welcome.remove();
+
+    const bubble = document.createElement("div");
+    bubble.className = role === "user" ? "msg-user" : "msg-assistant";
+
+    if (role === "user") {
+      bubble.textContent = text;
     } else {
-      systemStatus.textContent = "ONLINE";
+      const ragNote = ragUsed ? `<div class="rag-note">📚 SOURCED FROM YOUR DOCUMENTS</div>` : "";
+      const parsed = (typeof marked !== "undefined") ? marked.parse(text) : `<pre>${escapeHtml(text)}</pre>`;
+      bubble.innerHTML = `${ragNote}<div class="response-body">${parsed}</div>`;
     }
+    outputDisplay.appendChild(bubble);
+    outputDisplay.scrollTop = outputDisplay.scrollHeight;
   }
 
-  function showLoading(msg) {
-    if (outputDisplay) outputDisplay.innerHTML = `<div class="loading-msg">[ ${msg} ]</div>`;
+  function showThinking() {
+    if (!outputDisplay) return;
+    const welcome = outputDisplay.querySelector(".welcome-msg");
+    if (welcome) welcome.remove();
+    const el = document.createElement("div");
+    el.className = "msg-thinking";
+    el.id = "thinking-bubble";
+    el.innerHTML = `<span class="loading-msg">[ processing… ]</span>`;
+    outputDisplay.appendChild(el);
+    outputDisplay.scrollTop = outputDisplay.scrollHeight;
   }
 
-  function showError(msg) {
-    if (outputDisplay) outputDisplay.innerHTML =
-      `<div class="error-msg"><strong>[ERROR]</strong><br/>${escapeHtml(msg)}</div>`;
+  function removeThinking() {
+    const el = document.getElementById("thinking-bubble");
+    if (el) el.remove();
   }
 
-  function showResponse(text, ragUsed) {
-    const parsed = (typeof marked !== "undefined")
-      ? marked.parse(text)
-      : `<pre>${escapeHtml(text)}</pre>`;
-    const ragNote = ragUsed
-      ? `<div class="rag-note">📚 ANSWER SOURCED FROM YOUR DOCUMENTS</div>`
-      : "";
-    if (outputDisplay) outputDisplay.innerHTML = `${ragNote}<div class="response-body">${parsed}</div>`;
+  function showToast(msg) {
+    const t = document.createElement("div");
+    t.className = "toast";
+    t.textContent = msg;
+    document.body.appendChild(t);
+    setTimeout(() => t.classList.add("toast-show"), 10);
+    setTimeout(() => { t.classList.remove("toast-show"); setTimeout(() => t.remove(), 400); }, 3000);
   }
 
   function escapeHtml(str) {
-    return String(str)
-      .replace(/&/g, "&amp;").replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+    return String(str).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
   }
 
-  // ── EXECUTE ───────────────────────────────────────────────────
+  // ── EXECUTE button ────────────────────────────────────────────
   executeBtn && executeBtn.addEventListener("click", async () => {
     const prompt = promptInput ? promptInput.value.trim() : "";
-    if (!prompt && !inlineFile) {
-      showError("Enter a prompt or upload a PDF before executing.");
-      return;
-    }
+    if (!prompt && !inlineFile) { showToast("Enter a prompt or upload a PDF first."); return; }
+
+    const userText = prompt || "(Analyze uploaded PDF)";
+    appendMessage("user", userText);
+    conversation.push({ role: "user", content: userText });
+    if (promptInput) promptInput.value = "";
     executeBtn.disabled = true;
     setStatus("computing");
-    showLoading("Processing directive…");
+    showThinking();
 
     const fd = new FormData();
     if (prompt)        fd.append("prompt",      prompt);
@@ -231,21 +265,24 @@ document.addEventListener("DOMContentLoaded", () => {
     if (temperatureEl) fd.append("temperature",  temperatureEl.value);
     if (topPEl)        fd.append("top_p",        topPEl.value);
     if (inlineFile)    fd.append("file",         inlineFile);
+    fd.append("history", JSON.stringify(conversation.slice(0, -1).slice(-10)));
 
     try {
       const res  = await fetch("/process", { method: "POST", body: fd });
       const data = await res.json();
+      removeThinking();
       if (data.status === "success") {
         setStatus("online");
-        showResponse(data.response, data.rag_active);
+        appendMessage("assistant", data.response, data.rag_active);
+        conversation.push({ role: "assistant", content: data.response });
         if (data.rag_active) setRagActive(true);
       } else {
         setStatus("error");
-        showError(data.message || "Unknown error.");
+        appendMessage("assistant", "**Error:** " + (data.message || "Unknown error."), false);
       }
     } catch (err) {
-      setStatus("error");
-      showError(`Network error: ${err.message}`);
+      removeThinking(); setStatus("error");
+      appendMessage("assistant", "**Network error:** " + err.message, false);
     } finally {
       executeBtn.disabled = false;
     }
@@ -258,45 +295,45 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  // ── STUDY ─────────────────────────────────────────────────────
+  // ── STUDY button ──────────────────────────────────────────────
   studyBtn && studyBtn.addEventListener("click", async () => {
     const subject  = studySubject  ? studySubject.value.trim()  : "";
     const content  = studyContent  ? studyContent.value.trim()  : "";
     const question = studyQuestion ? studyQuestion.value.trim() : "";
-    if (!subject && !content && !question) {
-      showError("Enter a subject, paste some notes, or ask a question first.");
-      return;
-    }
-    studyBtn.disabled = true;
-    setStatus("computing");
-    showLoading("Generating study material…");
+    if (!subject && !content && !question) { showToast("Enter a subject, paste notes, or ask a question first."); return; }
 
+    const mode = studyModeEl ? studyModeEl.value : "explain";
     const diffIndex = difficultyEl ? parseInt(difficultyEl.value) : 1;
     const diffLabel = (DIFF_LABELS[diffIndex] || "Intermediate").toLowerCase();
-    const payload = {
-      mode: studyModeEl ? studyModeEl.value : "explain",
-      subject, content, question,
-      difficulty: diffLabel,
-    };
+    const userLabel = question || (mode.replace("_"," ") + (subject ? ": " + subject : ""));
+
+    appendMessage("user", userLabel);
+    conversation.push({ role: "user", content: userLabel });
+    if (studyQuestion) studyQuestion.value = "";
+    studyBtn.disabled = true;
+    setStatus("computing");
+    showThinking();
+
+    const payload = { mode, subject, content, question, difficulty: diffLabel,
+      history: conversation.slice(0, -1).slice(-8) };
 
     try {
-      const res  = await fetch("/study", {
-        method:  "POST",
-        headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify(payload),
-      });
+      const res  = await fetch("/study", { method: "POST",
+        headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
       const data = await res.json();
+      removeThinking();
       if (data.status === "success") {
         setStatus("online");
-        showResponse(data.response, data.rag_active);
+        appendMessage("assistant", data.response, data.rag_active);
+        conversation.push({ role: "assistant", content: data.response });
         if (data.rag_active) setRagActive(true);
       } else {
         setStatus("error");
-        showError(data.message || "Unknown error.");
+        appendMessage("assistant", "**Error:** " + (data.message || "Unknown error."), false);
       }
     } catch (err) {
-      setStatus("error");
-      showError(`Network error: ${err.message}`);
+      removeThinking(); setStatus("error");
+      appendMessage("assistant", "**Network error:** " + err.message, false);
     } finally {
       studyBtn.disabled = false;
     }
@@ -316,8 +353,7 @@ document.addEventListener("DOMContentLoaded", () => {
       if (data.loaded_docs && data.loaded_docs.length > 0) {
         updateKbList(data.loaded_docs);
         setRagActive(true);
-        if (kbStatus) kbStatus.textContent =
-          `${data.loaded_docs.length} doc(s) loaded — ${data.total_chunks} chunks`;
+        if (kbStatus) kbStatus.textContent = data.loaded_docs.length + " doc(s) loaded — " + data.total_chunks + " chunks";
         if (kbClearBtn) kbClearBtn.classList.remove("hidden");
       }
     })
